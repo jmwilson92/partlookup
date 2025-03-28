@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Part Lookup Result</title>
+</head>
+<body>
+    <h1>Results for {{ data.part_number }}</h1>
+    <p><strong>Manufacturer:</strong> {{ data.manufacturer }}</p>
+    <p><strong>Description:</strong> {{ data.description }}</p>
+    <p><strong>Category:</strong> {{ data.category }}</p>
+    <h2>Suppliers (In Stock)</h2>
+    <ul>
+        {% for supplier in data.suppliers %}
+            <li>{{ supplier.name }} (Score: {{ supplier.score }}/5):
+                <ul>
+                    <li>Availability: {{ supplier.availability }}</li>
+                    <li>Lead Time: {{ supplier.lead_time }}</li>
+                    <li>Price Breaks: {{ supplier.price_breaks }}</li>
+                    <li>MOQ: {{ supplier.moq }}</li>
+                </ul>
+            </li>
+        {% endfor %}
+    </ul>
+    <p><strong>Availability:</strong> {{ data.availability }}</p>
+    <p><strong>Single-Sourced:</strong> {{ data.single_sourced }}</p>
+    <p><strong>High-Risk Suppliers:</strong> {{ data.high_risk_suppliers|join(', ') or 'None' }}</p>
+    <p><strong>Lead Times:</strong> {{ data.lead_times }}</p>
+    <p><strong>Cost Alternatives:</strong> {{ data.cost_alternatives }}</p>
+    <p><strong>Obsolescence Risk:</strong> {{ data.obsolescence_risk }}</p>
+    <p><strong>Bottlenecks:</strong> {{ data.bottlenecks }}</p>
+    <p><strong>Disruption Exposure:</strong> {{ data.disruption_exposure }}</p>
+    <p><strong>Quality Standards:</strong> {{ data.quality_standards }}</p>
+    <p><strong>Substitution Flexibility:</strong> {{ data.substitution_flexibility }}</p>
+    <p><strong>Total Landed Cost:</strong> 
+        {% if data.total_landed_cost is number %}
+            ${{ "%.2f"|format(data.total_landed_cost) }}
+        {% else %}
+            {{ data.total_landed_cost }}
+        {% endif %}
+    </p>
+    <p><strong>Inventory Alignment:</strong> {{ data.inventory_alignment }}</p>
+    <p><strong>Sustainability Concerns:</strong> {{ data.sustainability_concerns }}</p>
+    <p><strong>Lead Time:</strong> {{ data.lead_time }}</p>
+    <p><strong>Current Events Impacting Supply:</strong> {{ data.current_events }}</p>
+    <p><strong>Sources Checked:</strong></p>
+    <ul>
+        {% for source in data.sources_checked %}
+            <li>{{ source }}</li>
+        {% endfor %}
+    </ul>
+    <a href="/">Back to Search</a>
+</body>
+</html>

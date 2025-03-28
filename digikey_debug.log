@@ -1,0 +1,99 @@
+2025-03-26 22:11:35,016 - WARNING -  * Debugger is active!
+2025-03-26 22:11:35,019 - INFO -  * Debugger PIN: 140-583-971
+2025-03-26 22:11:38,431 - INFO - 127.0.0.1 - - [26/Mar/2025 22:11:38] "GET / HTTP/1.1" 200 -
+2025-03-26 22:11:38,452 - INFO - 127.0.0.1 - - [26/Mar/2025 22:11:38] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-03-26 22:11:41,189 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:11:41,602 - DEBUG - https://api.digikey.com:443 "POST /v1/oauth2/token HTTP/1.1" 200 160
+2025-03-26 22:11:41,603 - INFO - Token retrieved successfully
+2025-03-26 22:11:41,604 - INFO - Searching DigiKey for variant: 640456-5
+2025-03-26 22:11:41,604 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:11:42,222 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 39343
+2025-03-26 22:11:42,744 - INFO - Response productsCount: 0
+2025-03-26 22:11:42,745 - INFO - Searching DigiKey for variant: 6404565
+2025-03-26 22:11:42,745 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:11:43,363 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 31546
+2025-03-26 22:11:43,469 - INFO - Response productsCount: 0
+2025-03-26 22:11:43,470 - INFO - Searching DigiKey for variant: 640456-5-ND
+2025-03-26 22:11:43,470 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:11:44,030 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 31546
+2025-03-26 22:11:44,121 - INFO - Response productsCount: 0
+2025-03-26 22:11:44,121 - INFO - Searching DigiKey for variant: WM4203-ND
+2025-03-26 22:11:44,121 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:11:44,733 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 16190
+2025-03-26 22:11:44,813 - INFO - Response productsCount: 0
+2025-03-26 22:11:44,814 - INFO - No results found after all variants
+2025-03-26 22:11:44,815 - DEBUG - Starting new HTTPS connection (1): api.mouser.com:443
+2025-03-26 22:11:46,142 - DEBUG - https://api.mouser.com:443 "POST /api/v1/search/partnumber?apiKey=6e28c540-f192-46bf-878d-1f1f97787bfa HTTP/1.1" 200 783
+2025-03-26 22:11:46,145 - INFO - 127.0.0.1 - - [26/Mar/2025 22:11:46] "POST / HTTP/1.1" 200 -
+2025-03-26 22:11:46,148 - INFO - 127.0.0.1 - - [26/Mar/2025 22:11:46] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-03-26 22:11:51,827 - INFO - 127.0.0.1 - - [26/Mar/2025 22:11:51] "GET / HTTP/1.1" 200 -
+2025-03-26 22:11:51,833 - INFO - 127.0.0.1 - - [26/Mar/2025 22:11:51] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-03-26 22:11:54,398 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:11:54,792 - DEBUG - https://api.digikey.com:443 "POST /v1/oauth2/token HTTP/1.1" 200 160
+2025-03-26 22:11:54,793 - INFO - Token retrieved successfully
+2025-03-26 22:11:54,793 - INFO - Searching DigiKey for variant: WT-1205
+2025-03-26 22:11:54,794 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:11:57,134 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 12255
+2025-03-26 22:11:57,134 - INFO - Response productsCount: 0
+2025-03-26 22:11:57,134 - INFO - Searching DigiKey for variant: WT1205
+2025-03-26 22:11:57,135 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:11:58,132 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 6477
+2025-03-26 22:11:58,132 - INFO - Response productsCount: 0
+2025-03-26 22:11:58,132 - INFO - Searching DigiKey for variant: WT-1205-ND
+2025-03-26 22:11:58,133 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:11:58,845 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 173
+2025-03-26 22:11:58,845 - INFO - Response productsCount: 0
+2025-03-26 22:11:58,846 - INFO - No results found after all variants
+2025-03-26 22:11:58,846 - DEBUG - Starting new HTTPS connection (1): api.mouser.com:443
+2025-03-26 22:11:59,245 - DEBUG - https://api.mouser.com:443 "POST /api/v1/search/partnumber?apiKey=6e28c540-f192-46bf-878d-1f1f97787bfa HTTP/1.1" 200 61
+2025-03-26 22:11:59,246 - INFO - 127.0.0.1 - - [26/Mar/2025 22:11:59] "POST / HTTP/1.1" 200 -
+2025-03-26 22:11:59,250 - INFO - 127.0.0.1 - - [26/Mar/2025 22:11:59] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-03-26 22:12:03,130 - INFO - 127.0.0.1 - - [26/Mar/2025 22:12:03] "GET / HTTP/1.1" 200 -
+2025-03-26 22:12:03,135 - INFO - 127.0.0.1 - - [26/Mar/2025 22:12:03] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-03-26 22:12:06,079 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:12:06,562 - DEBUG - https://api.digikey.com:443 "POST /v1/oauth2/token HTTP/1.1" 200 160
+2025-03-26 22:12:06,563 - INFO - Token retrieved successfully
+2025-03-26 22:12:06,563 - INFO - Searching DigiKey for variant: 433-1028-ND
+2025-03-26 22:12:06,563 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:12:08,835 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 17115
+2025-03-26 22:12:08,836 - INFO - Response productsCount: 0
+2025-03-26 22:12:08,836 - INFO - Searching DigiKey for variant: 4331028ND
+2025-03-26 22:12:08,836 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:12:09,994 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 11337
+2025-03-26 22:12:09,994 - INFO - Response productsCount: 0
+2025-03-26 22:12:09,995 - INFO - Searching DigiKey for variant: 433-1028-ND-ND
+2025-03-26 22:12:09,995 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:12:10,580 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 173
+2025-03-26 22:12:10,581 - INFO - Response productsCount: 0
+2025-03-26 22:12:10,581 - INFO - Searching DigiKey for variant: 0039012040
+2025-03-26 22:12:10,582 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:12:11,273 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 12548
+2025-03-26 22:12:11,274 - INFO - Response productsCount: 0
+2025-03-26 22:12:11,274 - INFO - No results found after all variants
+2025-03-26 22:12:11,275 - DEBUG - Starting new HTTPS connection (1): api.mouser.com:443
+2025-03-26 22:12:11,970 - DEBUG - https://api.mouser.com:443 "POST /api/v1/search/partnumber?apiKey=6e28c540-f192-46bf-878d-1f1f97787bfa HTTP/1.1" 200 61
+2025-03-26 22:12:11,971 - INFO - 127.0.0.1 - - [26/Mar/2025 22:12:11] "POST / HTTP/1.1" 200 -
+2025-03-26 22:12:11,975 - INFO - 127.0.0.1 - - [26/Mar/2025 22:12:11] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-03-26 22:12:30,794 - INFO - 127.0.0.1 - - [26/Mar/2025 22:12:30] "GET / HTTP/1.1" 200 -
+2025-03-26 22:12:30,798 - INFO - 127.0.0.1 - - [26/Mar/2025 22:12:30] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-03-26 22:12:33,102 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:12:33,514 - DEBUG - https://api.digikey.com:443 "POST /v1/oauth2/token HTTP/1.1" 200 160
+2025-03-26 22:12:33,514 - INFO - Token retrieved successfully
+2025-03-26 22:12:33,514 - INFO - Searching DigiKey for variant: WM4203-ND
+2025-03-26 22:12:33,515 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:12:34,068 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 16190
+2025-03-26 22:12:34,153 - INFO - Response productsCount: 0
+2025-03-26 22:12:34,153 - INFO - Searching DigiKey for variant: WM4203ND
+2025-03-26 22:12:34,154 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:12:35,567 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 8442
+2025-03-26 22:12:35,568 - INFO - Response productsCount: 0
+2025-03-26 22:12:35,568 - INFO - Searching DigiKey for variant: WM4203-ND-ND
+2025-03-26 22:12:35,568 - DEBUG - Starting new HTTPS connection (1): api.digikey.com:443
+2025-03-26 22:12:36,792 - DEBUG - https://api.digikey.com:443 "POST /products/v4/search/keyword HTTP/1.1" 200 173
+2025-03-26 22:12:36,793 - INFO - Response productsCount: 0
+2025-03-26 22:12:36,793 - INFO - No results found after all variants
+2025-03-26 22:12:36,794 - DEBUG - Starting new HTTPS connection (1): api.mouser.com:443
+2025-03-26 22:12:37,177 - DEBUG - https://api.mouser.com:443 "POST /api/v1/search/partnumber?apiKey=6e28c540-f192-46bf-878d-1f1f97787bfa HTTP/1.1" 200 61
+2025-03-26 22:12:37,178 - INFO - 127.0.0.1 - - [26/Mar/2025 22:12:37] "POST / HTTP/1.1" 200 -
+2025-03-26 22:12:37,183 - INFO - 127.0.0.1 - - [26/Mar/2025 22:12:37] "[36mGET /static/style.css HTTP/1.1[0m" 304 -
+2025-03-26 22:16:44,940 - INFO -  * Detected change in 'C:\\Users\\laugh\\Projects\\partLookupApp\\app.py', reloading

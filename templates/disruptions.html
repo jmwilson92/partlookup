@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Supply Chain Disruption Tracker</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .disruption { border: 1px solid #ccc; padding: 10px; margin: 5px 0; }
+        .map-placeholder { width: 100%; height: 200px; background: #eee; text-align: center; line-height: 200px; }
+        select { padding: 5px; margin-bottom: 20px; }
+        nav { margin-bottom: 20px; }
+        nav a { margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/">Part Lookup</a>
+        <a href="/disruptions">Disruption Tracker</a>
+    </nav>
+    <h1>Supply Chain Disruption Tracker</h1>
+    
+    <!-- Filter by Industry -->
+    <form method="GET">
+        <label for="industry">Filter by Industry: </label>
+        <select name="industry" id="industry" onchange="this.form.submit()">
+            {% for industry in industries %}
+                <option value="{{ industry }}" {% if industry == request.args.get('industry', 'All') %}selected{% endif %}>{{ industry }}</option>
+            {% endfor %}
+        </select>
+    </form>
+
+    <!-- Map Placeholder -->
+    <div class="map-placeholder">Map Coming Soon</div>
+
+    <!-- Disruption List -->
+    <h2>Current Disruptions</h2>
+    {% for disruption in disruptions %}
+        <div class="disruption">
+            <strong>{{ disruption.location }}</strong> ({{ disruption.industry }})<br>
+            Issue: {{ disruption.issue }}<br>
+            Severity: {{ disruption.severity }}
+        </div>
+    {% endfor %}
+    {% if not disruptions %}
+        <p>No disruptions found for this filter.</p>
+    {% endif %}
+</body>
+</html>
