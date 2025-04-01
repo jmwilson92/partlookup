@@ -2,53 +2,133 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Part Lookup Result</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Buddy - {{ data.part_number }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f7fafc, #edf2f7);
+            min-height: 100vh;
+        }
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        .risk-low { color: #10b981; }
+        .risk-medium { color: #f59e0b; }
+        .risk-high { color: #ef4444; }
+    </style>
 </head>
-<body>
-    <h1>Results for {{ data.part_number }}</h1>
-    <p><strong>Manufacturer:</strong> {{ data.manufacturer }}</p>
-    <p><strong>Description:</strong> {{ data.description }}</p>
-    <p><strong>Category:</strong> {{ data.category }}</p>
-    <h2>Suppliers (In Stock)</h2>
-    <ul>
-        {% for supplier in data.suppliers %}
-            <li>{{ supplier.name }} (Score: {{ supplier.score }}/5):
-                <ul>
-                    <li>Availability: {{ supplier.availability }}</li>
-                    <li>Lead Time: {{ supplier.lead_time }}</li>
-                    <li>Price Breaks: {{ supplier.price_breaks }}</li>
-                    <li>MOQ: {{ supplier.moq }}</li>
-                </ul>
-            </li>
-        {% endfor %}
-    </ul>
-    <p><strong>Availability:</strong> {{ data.availability }}</p>
-    <p><strong>Single-Sourced:</strong> {{ data.single_sourced }}</p>
-    <p><strong>High-Risk Suppliers:</strong> {{ data.high_risk_suppliers|join(', ') or 'None' }}</p>
-    <p><strong>Lead Times:</strong> {{ data.lead_times }}</p>
-    <p><strong>Cost Alternatives:</strong> {{ data.cost_alternatives }}</p>
-    <p><strong>Obsolescence Risk:</strong> {{ data.obsolescence_risk }}</p>
-    <p><strong>Bottlenecks:</strong> {{ data.bottlenecks }}</p>
-    <p><strong>Disruption Exposure:</strong> {{ data.disruption_exposure }}</p>
-    <p><strong>Quality Standards:</strong> {{ data.quality_standards }}</p>
-    <p><strong>Substitution Flexibility:</strong> {{ data.substitution_flexibility }}</p>
-    <p><strong>Total Landed Cost:</strong> 
-        {% if data.total_landed_cost is number %}
-            ${{ "%.2f"|format(data.total_landed_cost) }}
-        {% else %}
-            {{ data.total_landed_cost }}
-        {% endif %}
-    </p>
-    <p><strong>Inventory Alignment:</strong> {{ data.inventory_alignment }}</p>
-    <p><strong>Sustainability Concerns:</strong> {{ data.sustainability_concerns }}</p>
-    <p><strong>Lead Time:</strong> {{ data.lead_time }}</p>
-    <p><strong>Current Events Impacting Supply:</strong> {{ data.current_events }}</p>
-    <p><strong>Sources Checked:</strong></p>
-    <ul>
-        {% for source in data.sources_checked %}
-            <li>{{ source }}</li>
-        {% endfor %}
-    </ul>
-    <a href="/">Back to Search</a>
+<body class="text-gray-800">
+    <header class="bg-gray-900 text-white py-4 px-6 sticky top-0 shadow-lg z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Supply Buddy: {{ data.part_number }}</h1>
+            <a href="/" class="text-sm font-medium hover:text-gray-300">Back to Search</a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-xl shadow-md p-6 card">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Part Details</h2>
+                    <div class="space-y-3">
+                        <p><span class="font-medium text-gray-600">Manufacturer:</span> {{ data.manufacturer }}</p>
+                        <p><span class="font-medium text-gray-600">Description:</span> {{ data.description }}</p>
+                        <p><span class="font-medium text-gray-600">Category:</span> {{ data.category }}</p>
+                        <p><span class="font-medium text-gray-600">Availability:</span> 
+                            <span class="{% if data.availability == 'Yes' %}text-green-600{% else %}text-red-600{% endif %}">{{ data.availability }}</span>
+                        </p>
+                        <p><span class="font-medium text-gray-600">Single-Sourced:</span> {{ data.single_sourced }}</p>
+                        <p><span class="font-medium text-gray-600">Total Landed Cost:</span> 
+                            ${{ data.total_landed_cost|round(2) if data.total_landed_cost != "Calculating..." else "Unknown" }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <div class="bg-white rounded-xl shadow-md p-6 card">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Risk Assessment</h2>
+                    <div class="space-y-3">
+                        <p><span class="font-medium text-gray-600">Risk Score:</span> 
+                            <span class="{% if data.risk_score > 7 %}risk-high{% elif data.risk_score > 4 %}risk-medium{% else %}risk-low{% endif %}">
+                                {{ data.risk_score|round(1) }}/10
+                            </span>
+                        </p>
+                        <p><span class="font-medium text-gray-600">Obsolescence Risk:</span> {{ data.obsolescence_risk }}</p>
+                        <p><span class="font-medium text-gray-600">EOL Approaching:</span> {{ data.eol_approaching }}</p>
+                        <p><span class="font-medium text-gray-600">Bottlenecks:</span> {{ data.bottlenecks }}</p>
+                        <p><span class="font-medium text-gray-600">Disruption Exposure:</span> {{ data.disruption_exposure }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="lg:col-span-3">
+                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Suppliers</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% if data.suppliers %}
+                        {% for supplier in data.suppliers %}
+                            <div class="bg-white rounded-xl shadow-md p-6 card">
+                                <h3 class="text-lg font-medium text-gray-900">
+                                    <a href="{{ supplier.url }}" target="_blank" class="text-blue-600 hover:underline">
+                                        {{ supplier.name }}
+                                    </a>
+                                    <span class="text-sm text-gray-500">(Score: {{ supplier.score|round(1) }}/5)</span>
+                                </h3>
+                                <ul class="mt-3 space-y-2 text-gray-700">
+                                    <li><span class="font-medium">Availability:</span> {{ supplier.availability }}</li>
+                                    <li><span class="font-medium">Lead Time:</span> {{ supplier.lead_time }}</li>
+                                    <li><span class="font-medium">Price Breaks:</span> {{ supplier.price_breaks }}</li>
+                                    <li><span class="font-medium">MOQ:</span> {{ supplier.moq }}</li>
+                                </ul>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-gray-600">No suppliers found.</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="lg:col-span-3">
+                <div class="bg-white rounded-xl shadow-md p-6 card">
+                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Supply Chain Insights</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <p><span class="font-medium text-gray-600">High-Risk Suppliers:</span> {{ data.high_risk_suppliers|join(', ') or 'None' }}</p>
+                            <p><span class="font-medium text-gray-600">Cost Alternatives:</span> 
+                                {% for alt in data.cost_alternatives %}{{ alt.supplier }}: ${{ alt.min_price|round(2) }}, {% endfor %}
+                            </p>
+                            <p><span class="font-medium text-gray-600">Substitution Flexibility:</span> {{ data.substitution_flexibility }}</p>
+                            <p><span class="font-medium text-gray-600">Inventory Alignment:</span> {{ data.inventory_alignment }}</p>
+                            <p><span class="font-medium text-gray-600">Sustainability Concerns:</span> {{ data.sustainability_concerns }}</p>
+                        </div>
+                        <div>
+                            <p><span class="font-medium text-gray-600">Current Events:</span> {{ data.current_events }}</p>
+                            <p><span class="font-medium text-gray-600">Cost Volatility:</span> {{ data.cost_volatility }}</p>
+                            <p><span class="font-medium text-gray-600">Industry Trends:</span> {{ data.industry_trends|join('; ') }}</p>
+                            <p><span class="font-medium text-gray-600">Tariff Cost:</span> {{ data.tariff_cost}}</p>
+                            <p><span class="font-medium text-gray-600">Demand Surge:</span> {{ data.demand_surge }} ({{ data.demand_status }})</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-center">
+            <a href="/" class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600">New Search</a>
+        </div>
+    </main>
 </body>
 </html>

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Favorite Parts</title>
+</head>
+<body>
+    <div class="container">
+        <h1>Favorite Parts</h1>
+        <form method="POST" action="/favorites">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Save</th>
+                        <th>Critical</th>
+                        <th>Part Number</th>
+                        <th>Manufacturer</th>
+                        <th>Stock</th>
+                        <th>Lead Time</th>
+                        <th>Suppliers</th>
+                        <th>Cost Alternatives</th>
+                        <th>Risk Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for part in parts %}
+                    <tr class="{% if part.suppliers|selectattr('stock', 'lt', 10)|list %}table-danger{% endif %}">
+                        <td><input type="checkbox" name="favorite_parts" value="{{ part.part_number }}"></td>
+                        <td><input type="checkbox" name="critical_parts" value="{{ part.part_number }}" {% if FavoritePart.query.filter_by(part_num=part.part_number, critical=True).first() %}checked{% endif %}></td>
+                        <td>{{ part.part_number }}</td>
+                        <td>{{ part.manufacturer }}</td>
+                        <td>{{ part.suppliers | map(attribute='stock') | map('default', 0) | sum }}</td>
+                        <td>{{ part.lead_time }}</td>
+                        <td>
+                            {% for supplier in part.suppliers %}
+                                {{ supplier.name }} ({{ supplier.availability }}),
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% for alt in part.cost_alternatives %}
+                                {{ alt.supplier }}: ${{ alt.min_price|round(2) }},
+                            {% endfor %}
+                        </td>
+                        <td>{{ part.risk_score|round(1) }}/10</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <button type="submit" name="save_favorites" class="btn btn-info">Save to Favorites</button>
+            <button type="submit" name="tag_critical" class="btn btn-warning">Tag Critical</button>
+            <a href="/" class="btn btn-secondary">Back to Search</a>
+        </form>
+    </div>
+</body>
+</html>

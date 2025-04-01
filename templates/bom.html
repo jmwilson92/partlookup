@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Supply Buddy - BOM Lookup Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f7fafc, #edf2f7);
+            min-height: 100vh;
+        }
+        .card {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        .btn {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+        }
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        .risk-low { color: #10b981; }
+        .risk-medium { color: #f59e0b; }
+        .risk-high { color: #ef4444; }
+        .table-container {
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+    <header class="bg-gray-900 text-white py-4 px-6 sticky top-0 shadow-lg z-10">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <h1 class="text-2xl font-bold">Supply Buddy: BOM Lookup Results</h1>
+            <a href="/" class="text-sm font-medium hover:text-gray-300">Back to Search</a>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div class="space-y-6">
+            <div class="bg-white rounded-xl shadow-md p-6 card text-center">
+                <h2 class="text-xl font-semibold text-gray-900">BOM Resilience Score</h2>
+                <p class="text-3xl font-bold {% if resilience_score < 33 %}text-red-600{% elif resilience_score < 66 %}text-yellow-600{% else %}text-green-600{% endif %}">
+                    {{ resilience_score|round(1) }}/100
+                </p>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-md p-6 card table-container">
+                <form method="POST" action="/bom">
+                    <table class="w-full text-left text-sm text-gray-700">
+                        <thead class="bg-gray-100">
+                            <tr>
+                                <th class="p-3 font-semibold text-gray-900">Save</th>
+                                <th class="p-3 font-semibold text-gray-900">Critical</th>
+                                <th class="p-3 font-semibold text-gray-900">Part Number</th>
+                                <th class="p-3 font-semibold text-gray-900">Manufacturer</th>
+                                <th class="p-3 font-semibold text-gray-900">Stock</th>
+                                <th class="p-3 font-semibold text-gray-900">Lead Time</th>
+                                <th class="p-3 font-semibold text-gray-900">Suppliers</th>
+                                <th class="p-3 font-semibold text-gray-900">Cost Alternatives</th>
+                                <th class="p-3 font-semibold text-gray-900">Risk Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for part in parts %}
+                            <tr class="{% if part.suppliers|selectattr('stock', 'lt', 10)|list %}bg-red-50{% endif %} hover:bg-gray-50">
+                                <td class="p-3">
+                                    <input type="checkbox" name="favorite_parts" value="{{ part.part_number }}" {% if part.is_favorite %}checked{% endif %} class="h-4 w-4 text-blue-600">
+                                </td>
+                                <td class="p-3">
+                                    <input type="checkbox" name="critical_parts" value="{{ part.part_number }}" {% if part.is_critical %}checked{% endif %} class="h-4 w-4 text-blue-600">
+                                </td>
+                                <td class="p-3">{{ part.part_number }}</td>
+                                <td class="p-3">{{ part.manufacturer }}</td>
+                                <td class="p-3">{{ part.suppliers | map(attribute='stock') | map('default', 0) | sum }}</td>
+                                <td class="p-3">{{ part.lead_time }}</td>
+                                <td class="p-3">
+                                    {% for supplier in part.suppliers %}
+                                        <a href="{{ supplier.url }}" target="_blank" class="text-blue-600 hover:underline">{{ supplier.name }}</a> ({{ supplier.availability }}),
+                                    {% endfor %}
+                                </td>
+                                <td class="p-3">
+                                    {% for alt in part.cost_alternatives %}
+                                        {{ alt.supplier }}: ${{ alt.min_price|round(2) }},
+                                    {% endfor %}
+                                </td>
+                                <td class="p-3 {% if part.risk_score > 7 %}risk-high{% elif part.risk_score > 4 %}risk-medium{% else %}risk-low{% endif %}">
+                                    {{ part.risk_score|round(1) }}/10
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    <div class="mt-6 flex justify-center space-x-4 flex-wrap gap-4">
+                        <button type="submit" name="save_favorites" class="btn bg-blue-500 text-white py-2.5 px-6 rounded-xl hover:bg-blue-600">Save to Favorites</button>
+                        <button type="submit" name="tag_critical" class="btn bg-blue-500 text-white py-2.5 px-6 rounded-xl hover:bg-blue-600">Tag Critical</button>
+                        <button type="submit" name="download_report" class="btn bg-blue-500 text-white py-2.5 px-6 rounded-xl hover:bg-blue-600">Download Report</button>
+                        <a href="/bom" class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600">Upload Another BOM</a>
+                        <a href="/" class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600">Back to Search</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
