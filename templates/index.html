@@ -41,32 +41,28 @@
             <div class="text-center">
                 <h1 class="text-3xl font-bold text-gray-900 mb-2">Supply Buddy</h1>
                 <p class="text-gray-600 mb-6">Instantly analyze parts for availability, risk, and cost.</p>
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            <p class="text-{{ 'red' if category == 'error' else 'green' }}-600 mb-4">{{ message }}</p>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
             </div>
             <form method="POST" class="space-y-6">
+                {{ form.hidden_tag() }}
                 <div>
-                    <input 
-                        type="text" 
-                        name="part_number" 
-                        placeholder="Enter part number (e.g., 640456-5)" 
-                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 placeholder-gray-400"
-                    >
+                    {{ form.part_number(class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-700 placeholder-gray-400", placeholder="Enter part number (e.g., 640456-5)") }}
                 </div>
                 <div class="flex justify-center space-x-4">
-                    <button 
-                        type="submit" 
-                        class="btn bg-blue-500 text-white py-2.5 px-6 rounded-xl hover:bg-blue-600 w-full sm:w-auto"
-                    >
-                        Search
-                    </button>
-                    <a 
-                        href="/bom" 
-                        class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600 w-full sm:w-auto text-center"
-                    >
-                        Upload BOM
-                    </a>
+                    {{ form.submit(class="btn bg-blue-500 text-white py-2.5 px-6 rounded-xl hover:bg-blue-600 w-full sm:w-auto") }}
+                    <a href="/bom" class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600 w-full sm:w-auto text-center">Upload BOM</a>
                 </div>
             </form>
         </div>
     </div>
+    <footer class="text-center py-4 text-gray-600 absolute bottom-0 w-full">
+        Powered by DigiKey and Mouser APIs
+    </footer>
 </body>
 </html>

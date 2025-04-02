@@ -43,6 +43,15 @@
 
     <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div class="space-y-6">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="bg-white rounded-xl shadow-md p-6 card text-center">
+                        {% for category, message in messages %}
+                            <p class="text-{{ 'red' if category == 'error' else 'green' }}-600">{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
             <div class="bg-white rounded-xl shadow-md p-6 card text-center">
                 <h2 class="text-xl font-semibold text-gray-900">BOM Resilience Score</h2>
                 <p class="text-3xl font-bold {% if resilience_score < 33 %}text-red-600{% elif resilience_score < 66 %}text-yellow-600{% else %}text-green-600{% endif %}">
@@ -52,6 +61,7 @@
 
             <div class="bg-white rounded-xl shadow-md p-6 card table-container">
                 <form method="POST" action="/bom">
+                    {{ form.hidden_tag() }}
                     <table class="w-full text-left text-sm text-gray-700">
                         <thead class="bg-gray-100">
                             <tr>
@@ -78,7 +88,7 @@
                                 <td class="p-3">{{ part.part_number }}</td>
                                 <td class="p-3">{{ part.manufacturer }}</td>
                                 <td class="p-3">{{ part.suppliers | map(attribute='stock') | map('default', 0) | sum }}</td>
-                                <td class="p-3">{{ part.lead_time }}</td>
+                                <td class="p-3">{{ part.suppliers[0].lead_time if part.suppliers else 'N/A' }}</td>
                                 <td class="p-3">
                                     {% for supplier in part.suppliers %}
                                         <a href="{{ supplier.url }}" target="_blank" class="text-blue-600 hover:underline">{{ supplier.name }}</a> ({{ supplier.availability }}),
@@ -107,5 +117,8 @@
             </div>
         </div>
     </main>
+    <footer class="text-center py-4 text-gray-600">
+        Powered by DigiKey and Mouser APIs
+    </footer>
 </body>
 </html>

@@ -39,96 +39,144 @@
     </header>
 
     <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div class="lg:col-span-2">
-                <div class="bg-white rounded-xl shadow-md p-6 card">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Part Details</h2>
-                    <div class="space-y-3">
-                        <p><span class="font-medium text-gray-600">Manufacturer:</span> {{ data.manufacturer }}</p>
-                        <p><span class="font-medium text-gray-600">Description:</span> {{ data.description }}</p>
-                        <p><span class="font-medium text-gray-600">Category:</span> {{ data.category }}</p>
-                        <p><span class="font-medium text-gray-600">Availability:</span> 
-                            <span class="{% if data.availability == 'Yes' %}text-green-600{% else %}text-red-600{% endif %}">{{ data.availability }}</span>
-                        </p>
-                        <p><span class="font-medium text-gray-600">Single-Sourced:</span> {{ data.single_sourced }}</p>
-                        <p><span class="font-medium text-gray-600">Total Landed Cost:</span> 
-                            ${{ data.total_landed_cost|round(2) if data.total_landed_cost != "Calculating..." else "Unknown" }}
-                        </p>
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <div class="bg-white rounded-xl shadow-md p-6 card">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Risk Assessment</h2>
-                    <div class="space-y-3">
-                        <p><span class="font-medium text-gray-600">Risk Score:</span> 
-                            <span class="{% if data.risk_score > 7 %}risk-high{% elif data.risk_score > 4 %}risk-medium{% else %}risk-low{% endif %}">
-                                {{ data.risk_score|round(1) }}/10
-                            </span>
-                        </p>
-                        <p><span class="font-medium text-gray-600">Obsolescence Risk:</span> {{ data.obsolescence_risk }}</p>
-                        <p><span class="font-medium text-gray-600">EOL Approaching:</span> {{ data.eol_approaching }}</p>
-                        <p><span class="font-medium text-gray-600">Bottlenecks:</span> {{ data.bottlenecks }}</p>
-                        <p><span class="font-medium text-gray-600">Disruption Exposure:</span> {{ data.disruption_exposure }}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="lg:col-span-3">
-                <h2 class="text-2xl font-semibold text-gray-900 mb-4">Suppliers</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {% if data.suppliers %}
-                        {% for supplier in data.suppliers %}
-                            <div class="bg-white rounded-xl shadow-md p-6 card">
-                                <h3 class="text-lg font-medium text-gray-900">
-                                    <a href="{{ supplier.url }}" target="_blank" class="text-blue-600 hover:underline">
-                                        {{ supplier.name }}
-                                    </a>
-                                    <span class="text-sm text-gray-500">(Score: {{ supplier.score|round(1) }}/5)</span>
-                                </h3>
-                                <ul class="mt-3 space-y-2 text-gray-700">
-                                    <li><span class="font-medium">Availability:</span> {{ supplier.availability }}</li>
-                                    <li><span class="font-medium">Lead Time:</span> {{ supplier.lead_time }}</li>
-                                    <li><span class="font-medium">Price Breaks:</span> {{ supplier.price_breaks }}</li>
-                                    <li><span class="font-medium">MOQ:</span> {{ supplier.moq }}</li>
-                                </ul>
-                            </div>
+        <div class="space-y-6">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="bg-white rounded-xl shadow-md p-6 card">
+                        {% for category, message in messages %}
+                            <p class="text-{{ 'red' if category == 'error' else 'green' }}-600">{{ message }}</p>
                         {% endfor %}
-                    {% else %}
-                        <p class="text-gray-600">No suppliers found.</p>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="lg:col-span-3">
-                <div class="bg-white rounded-xl shadow-md p-6 card">
-                    <h2 class="text-xl font-semibold text-gray-900 mb-4">Supply Chain Insights</h2>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <p><span class="font-medium text-gray-600">High-Risk Suppliers:</span> {{ data.high_risk_suppliers|join(', ') or 'None' }}</p>
-                            <p><span class="font-medium text-gray-600">Cost Alternatives:</span> 
-                                {% for alt in data.cost_alternatives %}{{ alt.supplier }}: ${{ alt.min_price|round(2) }}, {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2">
+                    <div class="bg-white rounded-xl shadow-md p-6 card">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4">Part Details</h2>
+                        <div class="space-y-3">
+                            <p><span class="font-medium text-gray-600">Manufacturer:</span> {{ data.manufacturer }}</p>
+                            <p><span class="font-medium text-gray-600">Description:</span> {{ data.description }}</p>
+                            <p><span class="font-medium text-gray-600">Category:</span> {{ data.category }}</p>
+                            <p><span class="font-medium text-gray-600">Availability:</span> 
+                                <span class="{% if data.availability == 'Yes' %}text-green-600{% else %}text-red-600{% endif %}">{{ data.availability }}</span>
                             </p>
-                            <p><span class="font-medium text-gray-600">Substitution Flexibility:</span> {{ data.substitution_flexibility }}</p>
-                            <p><span class="font-medium text-gray-600">Inventory Alignment:</span> {{ data.inventory_alignment }}</p>
-                            <p><span class="font-medium text-gray-600">Sustainability Concerns:</span> {{ data.sustainability_concerns }}</p>
-                        </div>
-                        <div>
-                            <p><span class="font-medium text-gray-600">Current Events:</span> {{ data.current_events }}</p>
-                            <p><span class="font-medium text-gray-600">Cost Volatility:</span> {{ data.cost_volatility }}</p>
-                            <p><span class="font-medium text-gray-600">Industry Trends:</span> {{ data.industry_trends|join('; ') }}</p>
-                            <p><span class="font-medium text-gray-600">Tariff Cost:</span> {{ data.tariff_cost}}</p>
-                            <p><span class="font-medium text-gray-600">Demand Surge:</span> {{ data.demand_surge }} ({{ data.demand_status }})</p>
+                            <p><span class="font-medium text-gray-600">Single-Sourced:</span> {{ data.single_sourced }}</p>
                         </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
-        <div class="mt-6 flex justify-center">
-            <a href="/" class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600">New Search</a>
+                <div>
+                    <div class="bg-white rounded-xl shadow-md p-6 card">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4">Risk Assessment</h2>
+                        <div class="space-y-3">
+                            <p><span class="font-medium text-gray-600">Risk Score:</span> 
+                                <span class="{% if data.risk_score > 7 %}risk-high{% elif data.risk_score > 4 %}risk-medium{% else %}risk-low{% endif %}">
+                                    {{ data.risk_score|round(1) }}/10
+                                </span>
+                            </p>
+                            <p><span class="font-medium text-gray-600">Obsolescence Risk:</span> {{ data.obsolescence_risk }}</p>
+                            <p><span class="font-medium text-gray-600">EOL Approaching:</span> {{ data.eol_approaching }}</p>
+                            <p><span class="font-medium text-gray-600">Bottlenecks:</span> {{ data.bottlenecks }}</p>
+                            <p><span class="font-medium text-gray-600">Disruption Exposure:</span> {{ data.disruption_exposure }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-3">
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-4">Suppliers</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% if data.suppliers %}
+                            {% for supplier in data.suppliers %}
+                                <div class="bg-white rounded-xl shadow-md p-6 card">
+                                    <h3 class="text-lg font-medium text-gray-900">
+                                        <a href="{{ supplier.url }}" target="_blank" class="text-blue-600 hover:underline">
+                                            {{ supplier.name }}
+                                        </a>
+                                        <span class="text-sm text-gray-500">(Score: {{ supplier.score|round(1) }}/5)</span>
+                                    </h3>
+                                    <ul class="mt-3 space-y-2 text-gray-700">
+                                        <li><span class="font-medium">Availability:</span> {{ supplier.availability }}</li>
+                                        <li><span class="font-medium">Lead Time:</span> {{ supplier.lead_time }}</li>
+                                        <li><span class="font-medium">Price Breaks:</span> {{ supplier.price_breaks }}</li>
+                                        <li><span class="font-medium">MOQ:</span> {{ supplier.moq }}</li>
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-gray-600">No suppliers found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="lg:col-span-3">
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-4">Alternative Parts</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% if data.alternatives %}
+                            {% for alt in data.alternatives %}
+                                <div class="bg-white rounded-xl shadow-md p-6 card">
+                                    <h3 class="text-lg font-medium text-gray-900">
+                                        <a href="{{ alt.url }}" target="_blank" class="text-blue-600 hover:underline">
+                                            {{ alt.part_number }}
+                                        </a>
+                                    </h3>
+                                    <ul class="mt-3 space-y-2 text-gray-700">
+                                        <li><span class="font-medium">Manufacturer:</span> {{ alt.manufacturer }}</li>
+                                        <li><span class="font-medium">Stock:</span> {{ alt.stock }}</li>
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-gray-600">No alternative parts found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="lg:col-span-3">
+                    <div class="bg-white rounded-xl shadow-md p-6 card">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4">Supply Chain Insights</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p><span class="font-medium text-gray-600">High-Risk Suppliers:</span> {{ data.high_risk_suppliers|join(', ') or 'None' }}</p>
+                                <p><span class="font-medium text-gray-600">Cost Alternatives:</span> 
+                                    {% for alt in data.cost_alternatives %}{{ alt.supplier }}: ${{ alt.min_price|round(2) }}, {% endfor %}
+                                </p>
+                                <p><span class="font-medium text-gray-600">Substitution Flexibility:</span> {{ data.substitution_flexibility }}</p>
+                                <p><span class="font-medium text-gray-600">Inventory Alignment:</span> {{ data.inventory_alignment }}</p>
+                                <p><span class="font-medium text-gray-600">Sustainability Concerns:</span> {{ data.sustainability_concerns }}</p>
+                            </div>
+                            <div>
+                                <p><span class="font-medium text-gray-600">Current Events:</span> {{ data.current_events }}</p>
+                                <p><span class="font-medium text-gray-600">Cost Volatility:</span> {{ data.cost_volatility }}</p>
+                                <p><span class="font-medium text-gray-600">Industry Trends:</span> {{ data.industry_trends|join('; ') }}</p>
+                                <p><span class="font-medium text-gray-600">Tariff Cost:</span> {{ data.tariff_cost }}</p>
+                                <p><span class="font-medium text-gray-600">Demand Surge:</span> {{ data.demand_surge }} ({{ data.demand_status }})</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-3">
+                    <div class="bg-white rounded-xl shadow-md p-6 card">
+                        <h2 class="text-xl font-semibold text-gray-900 mb-4">Comments</h2>
+                        <form method="POST" action="/comment/{{ data.part_number }}" class="space-y-4">
+                            {{ comment_form.hidden_tag() }}
+                            {{ comment_form.comment(class="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500", placeholder="Add a comment...") }}
+                            {{ comment_form.submit(class="btn bg-blue-500 text-white py-2 px-4 rounded-xl hover:bg-blue-600") }}
+                        </form>
+                        {% for comment in comments %}
+                            <p class="mt-4 text-gray-700">{{ comment.comment }}</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 flex justify-center">
+                <a href="/" class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600">New Search</a>
+            </div>
         </div>
     </main>
+    <footer class="text-center py-4 text-gray-600">
+        Powered by DigiKey and Mouser APIs
+    </footer>
 </body>
 </html>
