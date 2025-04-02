@@ -110,7 +110,7 @@
                         <button type="submit" name="save_favorites" class="btn bg-blue-500 text-white py-2.5 px-6 rounded-xl hover:bg-blue-600">Save to Favorites</button>
                         <button type="submit" name="tag_critical" class="btn bg-blue-500 text-white py-2.5 px-6 rounded-xl hover:bg-blue-600">Tag Critical</button>
                         <button type="submit" name="download_report" class="btn bg-blue-500 text-white py-2.5 px-6 rounded-xl hover:bg-blue-600">Download Report</button>
-                        <a href="/bom" class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600">Upload Another BOM</a>
+                        <a href="{{ url_for('bom_upload', reset_session='true') }}" class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600">Upload Another BOM</a>
                         <a href="/" class="btn bg-gray-500 text-white py-2.5 px-6 rounded-xl hover:bg-gray-600">Back to Search</a>
                     </div>
                 </form>

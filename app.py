@@ -545,11 +545,16 @@ def index():
 @app.route("/bom", methods=["GET", "POST"])
 def bom_upload():
     form = BOMUploadForm()
-    if form.validate_on_submit():
-        file = form.bom_file.data
+    reset_session = request.args.get('reset_session', 'false').lower() == 'true'
+    if reset_session:
+        session.pop('bom_parts', None)  # Clear session data
+        return render_template("bom_upload.html", form=form)
+
+    if request.method == "POST" and form.validate_on_submit():
+        file = request.files.get('bom_file')
         if not file:
             flash("No file uploaded", "error")
-            return redirect(url_for('bom_upload'))
+            return render_template("bom_upload.html", form=form)
         
         csv_content = file.read().decode("utf-8").splitlines()
         logging.debug(f"Uploaded CSV content: {csv_content}")
@@ -561,7 +566,7 @@ def bom_upload():
         
         if not part_key:
             flash("CSV must have a part number column (e.g., 'PartNumber')", "error")
-            return redirect(url_for('bom_upload'))
+            return render_template("bom_upload.html", form=form)
         
         for row in reader:
             part_num = row[part_key]
@@ -577,9 +582,8 @@ def bom_upload():
         return render_template("bom.html", parts=parts, resilience_score=resilience_score, form=form)
     
     parts = session.get('bom_parts', [])
-    if not parts and request.method == "POST":
-        flash("No parts found - please upload a BOM", "error")
-        return redirect(url_for('bom_upload'))
+    if not parts:
+        return render_template("bom_upload.html", form=form)
     
     resilience_score = sum(p["risk_score"] for p in parts if "risk_score" in p) / len(parts) if parts else 0
     resilience_score = 100 - (resilience_score * 10)
@@ -601,6 +605,61 @@ def bom_upload():
                 part["is_favorite"] = part["part_number"] in selected_parts
             session['bom_parts'] = parts
             flash("Favorites and critical tags updated", "success")
+            return render_template("bom.html", parts=parts, resilience_score=resilience_score, form=form)
+        
+        if "download_report" in request.form:
+            report_data = {}
+            for part in parts:
+                part_num = part["part_number"]
+                if part_num not in report_data:
+                    report_data[part_num] = {
+                        "manufacturer": part["manufacturer"],
+                        "total_stock": 0,
+                        "best_price": 0.0,
+                        "suppliers": [],
+                        "risk_score": part["risk_score"]
+                    }
+                report_part = report_data[part_num]
+                report_part["total_stock"] += sum(s["stock"] for s in part["suppliers"])
+                for supplier in part["suppliers"]:
+                    price = 0.0
+                    if supplier["price_breaks"] != "Not available":
+                        try:
+                            price = float(supplier["price_breaks"].split(",")[0].split("$")[1])
+                        except (IndexError, ValueError):
+                            pass
+                    report_part["best_price"] = min(report_part["best_price"], price) if report_part["best_price"] else price
+                    report_part["suppliers"].append({
+                        "name": supplier["name"],
+                        "stock": supplier["stock"],
+                        "price": price,
+                        "lead_time": supplier["lead_time"]
+                    })
+
+            buffer = BytesIO()
+            c = canvas.Canvas(buffer, pagesize=letter)
+            c.drawString(100, 750, f"BOM Report - {datetime.now().strftime('%Y-%m-%d')}")
+            y = 700
+            for part_num, data in report_data.items():
+                c.drawString(100, y, f"{part_num} ({data['manufacturer']})")
+                y -= 20
+                c.drawString(110, y, f"Total Stock: {data['total_stock']}")
+                y -= 20
+                c.drawString(110, y, f"Best Price: ${data['best_price']:.2f}")
+                y -= 20
+                c.drawString(110, y, f"Risk Score: {data['risk_score']:.1f}/10")
+                y -= 20
+                for supplier in data["suppliers"]:
+                    c.drawString(120, y, f"{supplier['name']}: Stock: {supplier['stock']}, Price: ${supplier['price']:.2f}, Lead: {supplier['lead_time']}")
+                    y -= 20
+                y -= 10
+                if y < 50:
+                    c.showPage()
+                    y = 750
+            c.save()
+            buffer.seek(0)
+            logging.info("Generated BOM report")
+            return send_file(buffer, as_attachment=True, download_name="bom_report.pdf")
             return render_template("bom.html", parts=parts, resilience_score=resilience_score, form=form)
         
         if "download_report" in request.form:
