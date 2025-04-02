@@ -16,25 +16,33 @@ import os
 
 # Load environment variables
 load_dotenv()
-
-app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "540604112029342a864840d1d2f840788987ae190c037b4f")  # Fallback for local dev
-
-# Logging setup
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[logging.FileHandler("debug.log"), logging.StreamHandler()]
 )
+logging.info(f"Loaded .env from: {os.path.abspath('.env') if os.path.exists('.env') else 'Not found'}")
 
-# API credentials from .env
+app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "540604112029342a864840d1d2f840788987ae190c037b4f")  # Fallback
+
+# API credentials
 DIGIKEY_CLIENT_ID = os.getenv("DIGIKEY_CLIENT_ID")
 DIGIKEY_CLIENT_SECRET = os.getenv("DIGIKEY_CLIENT_SECRET")
 DIGIKEY_TOKEN_URL = "https://api.digikey.com/v1/oauth2/token"
 DIGIKEY_SEARCH_URL = "https://api.digikey.com/products/v4/search/keyword"
 MOUSER_API_KEY = os.getenv("MOUSER_API_KEY")
 MOUSER_API_URL = "https://api.mouser.com/api/v1/search/partnumber"
-NEWS_API_KEY = os.getenv("NEWS_API_KEY")  # Ensure this is in .env
+NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+
+# Log API keys (mask sensitive parts for security)
+logging.info(f"DIGIKEY_CLIENT_ID: {DIGIKEY_CLIENT_ID[:5] + '...' if DIGIKEY_CLIENT_ID else 'None'}")
+logging.info(f"MOUSER_API_KEY: {MOUSER_API_KEY[:5] + '...' if MOUSER_API_KEY else 'None'}")
+logging.info(f"NEWS_API_KEY: {NEWS_API_KEY[:5] + '...' if NEWS_API_KEY else 'None'}")
+
+if not all([DIGIKEY_CLIENT_ID, DIGIKEY_CLIENT_SECRET, MOUSER_API_KEY, NEWS_API_KEY]):
+    logging.error("One or more API keys are missing from .env")
+    raise ValueError("API keys not configured properly - check .env file")
 
 # Constants
 RISKY_REGIONS = ["CN", "RU"]
