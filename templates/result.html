@@ -28,6 +28,28 @@
         .risk-low { color: #10b981; }
         .risk-medium { color: #f59e0b; }
         .risk-high { color: #ef4444; }
+        /* Tooltip styles */
+        .tooltip {
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            position: absolute;
+            top: 50%;
+            left: 100%;
+            transform: translateY(-50%) translateX(10px); /* Shift right */
+            background-color: #1f2937;
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            width: 250px;
+            z-index: 10;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        .group:hover .tooltip {
+            visibility: visible;
+            opacity: 1;
+        }
     </style>
 </head>
 <body class="text-gray-800">
@@ -65,19 +87,35 @@
                     </div>
                 </div>
 
+                <!-- Risk Assessment with Side Tooltips -->
                 <div>
                     <div class="bg-white rounded-xl shadow-md p-6 card">
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Risk Assessment</h2>
                         <div class="space-y-3">
-                            <p><span class="font-medium text-gray-600">Risk Score:</span> 
-                                <span class="{% if data.risk_score > 7 %}risk-high{% elif data.risk_score > 4 %}risk-medium{% else %}risk-low{% endif %}">
-                                    {{ data.risk_score|round(1) }}/10
-                                </span>
-                            </p>
-                            <p><span class="font-medium text-gray-600">Obsolescence Risk:</span> {{ data.obsolescence_risk }}</p>
-                            <p><span class="font-medium text-gray-600">EOL Approaching:</span> {{ data.eol_approaching }}</p>
-                            <p><span class="font-medium text-gray-600">Bottlenecks:</span> {{ data.bottlenecks }}</p>
-                            <p><span class="font-medium text-gray-600">Disruption Exposure:</span> {{ data.disruption_exposure }}</p>
+                            <div class="relative group">
+                                <p><span class="font-medium text-gray-600">Risk Score:</span> 
+                                    <span class="{% if data.risk_score > 7 %}risk-high{% elif data.risk_score > 4 %}risk-medium{% else %}risk-low{% endif %}">
+                                        {{ data.risk_score|round(1) }}/10
+                                    </span>
+                                </p>
+                                <span class="tooltip">Overall risk (0-10) based on supplier reliability, single-sourcing, and stock trends. Higher = riskier.</span>
+                            </div>
+                            <div class="relative group">
+                                <p><span class="font-medium text-gray-600">Obsolescence Risk:</span> {{ data.obsolescence_risk }}</p>
+                                <span class="tooltip">Yes if discontinued/end-of-life; High if last-time buy; No otherwise. From DigiKey status.</span>
+                            </div>
+                            <div class="relative group">
+                                <p><span class="font-medium text-gray-600">EOL Approaching:</span> {{ data.eol_approaching }}</p>
+                                <span class="tooltip">Yes if last-time buy/end-of-life; Possible if lead time > 6 months; No or based on stock decline.</span>
+                            </div>
+                            <div class="relative group">
+                                <p><span class="font-medium text-gray-600">Bottlenecks:</span> {{ data.bottlenecks }}</p>
+                                <span class="tooltip">High if stock < 10 or lead time > 20 weeks for most suppliers; Low if some; None if none.</span>
+                            </div>
+                            <div class="relative group">
+                                <p><span class="font-medium text-gray-600">Disruption Exposure:</span> {{ data.disruption_exposure }}</p>
+                                <span class="tooltip">High if suppliers in risky regions (e.g., CN, RU); Low if not. From news and COO.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -132,24 +170,78 @@
                 </div>
 
                 <div class="lg:col-span-3">
+                    <h2 class="text-2xl font-semibold text-gray-900 mb-4">Parts You May Be Interested In</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {% if data.parts_you_may_be_interested_in %}
+                            {% for part in data.parts_you_may_be_interested_in %}
+                                <div class="bg-white rounded-xl shadow-md p-6 card">
+                                    <h3 class="text-lg font-medium text-gray-900">
+                                        <a href="{{ part.url }}" target="_blank" class="text-blue-600 hover:underline">
+                                            {{ part.part_number }}
+                                        </a>
+                                    </h3>
+                                    <ul class="mt-3 space-y-2 text-gray-700">
+                                        <li><span class="font-medium">Manufacturer:</span> {{ part.manufacturer }}</li>
+                                        <li><span class="font-medium">Stock:</span> {{ part.stock }}</li>
+                                    </ul>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <p class="text-gray-600">No related parts found.</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Supply Chain Insights with Side Tooltips -->
+                <div class="lg:col-span-3">
                     <div class="bg-white rounded-xl shadow-md p-6 card">
                         <h2 class="text-xl font-semibold text-gray-900 mb-4">Supply Chain Insights</h2>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <p><span class="font-medium text-gray-600">High-Risk Suppliers:</span> {{ data.high_risk_suppliers|join(', ') or 'None' }}</p>
-                                <p><span class="font-medium text-gray-600">Cost Alternatives:</span> 
-                                    {% for alt in data.cost_alternatives %}{{ alt.supplier }}: ${{ alt.min_price|round(2) }}, {% endfor %}
-                                </p>
-                                <p><span class="font-medium text-gray-600">Substitution Flexibility:</span> {{ data.substitution_flexibility }}</p>
-                                <p><span class="font-medium text-gray-600">Inventory Alignment:</span> {{ data.inventory_alignment }}</p>
-                                <p><span class="font-medium text-gray-600">Sustainability Concerns:</span> {{ data.sustainability_concerns }}</p>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">High-Risk Suppliers:</span> {{ data.high_risk_suppliers|join(', ') or 'None' }}</p>
+                                    <span class="tooltip">Suppliers in risky regions (e.g., CN, RU) based on COO and news disruptions.</span>
+                                </div>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">Cost Alternatives:</span> 
+                                        {% for alt in data.cost_alternatives %}{{ alt.supplier }}: ${{ alt.min_price|round(2) }}, {% endfor %}
+                                    </p>
+                                    <span class="tooltip">Cheapest supplier options sorted by minimum price from price breaks.</span>
+                                </div>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">Substitution Flexibility:</span> {{ data.substitution_flexibility }}</p>
+                                    <span class="tooltip">Yes if exact spec-matched alternatives exist; No if none found.</span>
+                                </div>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">Inventory Alignment:</span> {{ data.inventory_alignment }}</p>
+                                    <span class="tooltip">Low if stock < 50% historical avg; High if > 150%; Aligned if in between.</span>
+                                </div>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">Sustainability Concerns:</span> {{ data.sustainability_concerns }}</p>
+                                    <span class="tooltip">Lists suppliers with stock < 10, indicating potential shortages.</span>
+                                </div>
                             </div>
                             <div>
-                                <p><span class="font-medium text-gray-600">Current Events:</span> {{ data.current_events }}</p>
-                                <p><span class="font-medium text-gray-600">Cost Volatility:</span> {{ data.cost_volatility }}</p>
-                                <p><span class="font-medium text-gray-600">Industry Trends:</span> {{ data.industry_trends|join('; ') }}</p>
-                                <p><span class="font-medium text-gray-600">Tariff Cost:</span> {{ data.tariff_cost }}</p>
-                                <p><span class="font-medium text-gray-600">Demand Surge:</span> {{ data.demand_surge }} ({{ data.demand_status }})</p>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">Current Events:</span> {{ data.current_events }}</p>
+                                    <span class="tooltip">Recent news headlines about manufacturer supply chain issues.</span>
+                                </div>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">Cost Volatility:</span> {{ data.cost_volatility }}</p>
+                                    <span class="tooltip">High if price range > 50% of avg price over time; Low otherwise.</span>
+                                </div>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">Industry Trends:</span> {{ data.industry_trends|join('; ') }}</p>
+                                    <span class="tooltip">Latest industry news headlines for the manufacturer.</span>
+                                </div>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">Tariff Cost:</span> {{ data.tariff_cost }}</p>
+                                    <span class="tooltip">Yes if any supplier has active tariffs (e.g., US 301); No if none.</span>
+                                </div>
+                                <div class="relative group">
+                                    <p><span class="font-medium text-gray-600">Demand Surge:</span> {{ data.demand_surge }} ({{ data.demand_status }})</p>
+                                    <span class="tooltip">Yes if stock < 50% of prior check (Shortage); No if Stable/Restocking.</span>
+                                </div>
                             </div>
                         </div>
                     </div>

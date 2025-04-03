@@ -10,7 +10,7 @@ import csv
 from io import StringIO, BytesIO
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-from datetime import datetime
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 import os
 
@@ -65,7 +65,7 @@ class CommentForm(FlaskForm):
     comment = TextAreaField("Comment", validators=[DataRequired()])
     submit = SubmitField("Submit")
 
-# Database models (unchanged)
+# Database models
 class PartTrack(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     part_num = db.Column(db.String(50))
@@ -73,6 +73,8 @@ class PartTrack(db.Model):
     stock = db.Column(db.Integer)
     timestamp = db.Column(db.String(20))
     risk_score = db.Column(db.Float)
+    suppliers_json = db.Column(db.Text)
+    result_json = db.Column(db.Text)
 
 class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -99,9 +101,9 @@ class Substitutions(db.Model):
 with app.app_context():
     db.drop_all()
     db.create_all()
-    logging.info("Database recreated successfully.")
+    logging.info("Database recreated with suppliers_json and result_json columns.")
 
-# API Functions (unchanged except for caching in get_part_info)
+# API Functions
 def get_digikey_token():
     payload = {"grant_type": "client_credentials", "client_id": DIGIKEY_CLIENT_ID, "client_secret": DIGIKEY_CLIENT_SECRET}
     try:
@@ -113,7 +115,6 @@ def get_digikey_token():
         raise
 
 def get_digikey_data(part_number):
-    # [Unchanged - same as original]
     try:
         token = get_digikey_token()
         headers = {
@@ -141,8 +142,7 @@ def get_digikey_data(part_number):
         logging.error(f"DigiKey Search error: {str(e)}")
         return None, f"DigiKey API: Error - {str(e)}", "https://www.digikey.com", "US", "8536.69", False
 
-def get_digikey_alternatives(part_number, original_specs):
-    # [Unchanged - same as original]
+def get_digikey_strict_alternatives(part_number, original_specs):
     try:
         token = get_digikey_token()
         headers = {
@@ -154,39 +154,169 @@ def get_digikey_alternatives(part_number, original_specs):
             "Content-Type": "application/json",
             "Accept": "application/json"
         }
-        category = original_specs.get("category", "Connectors, Interconnects")
-        payload = {
-            "keywords": "",
-            "limit": 5,
-            "offset": 0,
-            "filters": {
-                "Category": category,
-                "Number of Positions": original_specs.get("Number of Positions", ""),
-                "Pitch - Mating": original_specs.get("Pitch - Mating", ""),
-                "Mounting Type": original_specs.get("Mounting Type", "")
-            }
+
+        # Strict payload with all required specs
+        required_specs = {
+            "Category": original_specs.get("category", "Connectors, Interconnects"),
+            "Manufacturer": original_specs.get("manufacturer", ""),
+            "Series": original_specs.get("Series", ""),
+            "Connector Type": original_specs.get("Connector Type", ""),
+            "Number of Positions": original_specs.get("Number of Positions", ""),
+            "Pitch - Mating": original_specs.get("Pitch - Mating", ""),
+            "Mounting Type": original_specs.get("Mounting Type", "")
         }
-        logging.debug(f"DigiKey alternatives payload: {json.dumps(payload, indent=2)}")
+        payload = {
+            "keywords": f"{required_specs['Manufacturer']} {required_specs['Series']} {required_specs['Connector Type']}".strip(),
+            "limit": 10,
+            "offset": 0,
+            "filters": {k: v for k, v in required_specs.items() if v}  # Only non-empty filters
+        }
+
+        logging.debug(f"DigiKey strict alternatives payload: {json.dumps(payload, indent=2)}")
         response = requests.post(DIGIKEY_SEARCH_URL, headers=headers, json=payload, timeout=5)
-        response.raise_for_status()
+        if response.status_code != 200:
+            logging.error(f"DigiKey strict alternatives failed with {response.status_code}: {response.text}")
+            raise requests.exceptions.RequestException(f"Status {response.status_code}: {response.text}")
         data = response.json()
-        if data.get("ProductsCount", 0) > 0:
-            alternatives = [p for p in data["Products"] if p["ManufacturerProductNumber"] != part_number]
-            return [
-                {
-                    "part_number": alt["ManufacturerProductNumber"],
-                    "manufacturer": alt["Manufacturer"]["Name"],
-                    "stock": alt["QuantityAvailable"],
-                    "url": alt["ProductUrl"]
-                } for alt in alternatives[:3]
-            ]
-        return []
+        logging.debug(f"DigiKey strict alternatives response: {json.dumps(data, indent=2)}")
+
+        if data.get("ProductsCount", 0) == 0:
+            return []
+
+        alternatives = []
+        for product in data["Products"]:
+            if product["ManufacturerProductNumber"] == part_number:
+                continue
+            params = {}
+            for p in product.get("Parameters", []):
+                param_key = p.get("Parameter") or p.get("ParameterText")
+                if param_key and "Value" in p:
+                    params[param_key] = p["Value"]
+
+            # Must match ALL required specs exactly
+            match = True
+            for key, required_value in required_specs.items():
+                if required_value and params.get(key) != required_value:
+                    match = False
+                    logging.debug(f"Rejected {product['ManufacturerProductNumber']} - {key}: {params.get(key)} != {required_value}")
+                    break
+            if product.get("Series", {}).get("Name") != required_specs["Series"]:
+                match = False
+                logging.debug(f"Rejected {product['ManufacturerProductNumber']} - Series mismatch: {product.get('Series', {}).get('Name')} != {required_specs['Series']}")
+
+            if match:
+                alternatives.append({
+                    "part_number": product["ManufacturerProductNumber"],
+                    "manufacturer": product["Manufacturer"]["Name"],
+                    "stock": product["QuantityAvailable"],
+                    "url": product["ProductUrl"]
+                })
+                logging.debug(f"Strict alternative found: {product['ManufacturerProductNumber']}")
+
+        return alternatives[:3]
+
     except requests.exceptions.RequestException as e:
-        logging.error(f"DigiKey alternatives search error: {str(e)}")
+        logging.error(f"DigiKey strict alternatives search error: {str(e)}")
         return []
 
+
+def get_digikey_related_parts(part_number, original_specs):
+    try:
+        token = get_digikey_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "X-DIGIKEY-Client-Id": DIGIKEY_CLIENT_ID,
+            "X-DIGIKEY-Locale-Site": "US",
+            "X-DIGIKEY-Locale-Language": "en",
+            "X-DIGIKEY-Locale-Currency": "USD",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+
+        # Broad payload, minimal filters
+        manufacturer = original_specs.get("manufacturer", "")
+        category = original_specs.get("category", "Connectors, Interconnects")
+        payload = {
+            "keywords": f"{manufacturer} connectors",  # Broader than original part
+            "limit": 10,
+            "offset": 0,
+            "filters": {"Manufacturer": manufacturer, "Category": category}
+        }
+
+        logging.debug(f"DigiKey related parts payload: {json.dumps(payload, indent=2)}")
+        response = requests.post(DIGIKEY_SEARCH_URL, headers=headers, json=payload, timeout=5)
+        if response.status_code != 200:
+            logging.error(f"DigiKey related parts failed with {response.status_code}: {response.text}")
+            raise requests.exceptions.RequestException(f"Status {response.status_code}: {response.text}")
+        data = response.json()
+        logging.debug(f"DigiKey related parts response: {json.dumps(data, indent=2)}")
+
+        if data.get("ProductsCount", 0) == 0:
+            return []
+
+        strict_specs = {
+            "Number of Positions": original_specs.get("Number of Positions"),
+            "Pitch - Mating": original_specs.get("Pitch - Mating"),
+            "Mounting Type": original_specs.get("Mounting Type"),
+            "Connector Type": original_specs.get("Connector Type"),
+            "Series": original_specs.get("Series")
+        }
+        related = []
+        for product in data["Products"]:
+            if product["ManufacturerProductNumber"] == part_number:
+                continue
+            params = {}
+            for p in product.get("Parameters", []):
+                param_key = p.get("Parameter") or p.get("ParameterText")
+                if param_key and "Value" in p:
+                    params[param_key] = p["Value"]
+
+            # Exclude if it matches ALL strict specs
+            is_strict_match = all(
+                strict_specs[key] is None or params.get(key) == strict_specs[key]
+                for key in strict_specs
+            ) and product.get("Series", {}).get("Name") == strict_specs["Series"]
+            if is_strict_match:
+                logging.debug(f"Excluded strict match from related: {product['ManufacturerProductNumber']}")
+                continue
+
+            related.append({
+                "part_number": product["ManufacturerProductNumber"],
+                "manufacturer": product["Manufacturer"]["Name"],
+                "stock": product["QuantityAvailable"],
+                "url": product["ProductUrl"]
+            })
+            logging.debug(f"Related part found: {product['ManufacturerProductNumber']}")
+
+        return related[:3]
+
+    except requests.exceptions.RequestException as e:
+        logging.error(f"DigiKey related parts search error: {str(e)}")
+        return []
+
+def get_digikey_product_details(part_number):
+    try:
+        token = get_digikey_token()
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "X-DIGIKEY-Client-Id": DIGIKEY_CLIENT_ID,
+            "X-DIGIKEY-Locale-Site": "US",
+            "X-DIGIKEY-Locale-Language": "en",
+            "X-DIGIKEY-Locale-Currency": "USD",
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+        }
+        url = f"https://api.digikey.com/products/v4/products/{part_number}"
+        response = requests.get(url, headers=headers, timeout=5)
+        response.raise_for_status()
+        data = response.json()
+        logging.debug(f"DigiKey Product Details response for {part_number}: {json.dumps(data, indent=2)}")
+        return data, "DigiKey Product Details: Success", data.get("ProductUrl", "https://www.digikey.com")
+    except requests.exceptions.RequestException as e:
+        logging.error(f"DigiKey Product Details error for {part_number}: {str(e)}")
+        return None, f"DigiKey Product Details: Error - {str(e)}", "https://www.digikey.com"
+
 def get_mouser_data(part_number):
-    # [Unchanged - same as original]
     try:
         url = f"{MOUSER_API_URL}?apiKey={MOUSER_API_KEY}"
         headers = {"Content-Type": "application/json", "Accept": "application/json"}
@@ -237,7 +367,6 @@ def get_mouser_data(part_number):
         return None, f"Mouser API: Error - {str(e)}", "https://www.mouser.com", "US", "8536.69", False, 0, None
 
 def calculate_supplier_score(supplier_data, api_success):
-    # [Unchanged - same as original]
     ease = 1 if api_success else 0
     availability = 2 if supplier_data["stock"] > 0 else 0
     price_breaks = len(supplier_data["price_breaks"].split(", ")) * 0.5 if supplier_data["price_breaks"] != "Not available" else 0
@@ -249,7 +378,6 @@ def calculate_supplier_score(supplier_data, api_success):
     return min(total / 4, 5)
 
 def get_current_events(manufacturer, category, supplier_regions):
-    # [Unchanged - same as original]
     try:
         url = f"https://newsapi.org/v2/everything?q={manufacturer}+supply+chain+electronics&sortBy=relevance&apiKey={NEWS_API_KEY}"
         response = requests.get(url, timeout=5)
@@ -271,7 +399,6 @@ def get_current_events(manufacturer, category, supplier_regions):
         return "Failed to fetch current events.", set()
 
 def get_industry_trends(manufacturer):
-    # [Unchanged - same as original]
     try:
         url = f"https://newsapi.org/v2/everything?q={manufacturer}+industry+trends+supply+chain+electronics&sortBy=relevance&apiKey={NEWS_API_KEY}"
         response = requests.get(url, timeout=5)
@@ -287,7 +414,6 @@ def get_industry_trends(manufacturer):
         return ["Failed to fetch industry trends."]
 
 def get_tariff_cost(part_number, supplier_data_list):
-    # [Unchanged - same as original]
     tariff_status = "No"
     for supplier in supplier_data_list:
         tariff_active = supplier.get("tariff_active", False)
@@ -297,7 +423,6 @@ def get_tariff_cost(part_number, supplier_data_list):
     return tariff_status
 
 def get_demand_surge(part_number, current_stock):
-    # [Unchanged - same as original]
     history = PartTrack.query.filter_by(part_num=part_number).order_by(PartTrack.timestamp.desc()).limit(2).all()
     if len(history) < 2:
         return "Unknown", "Insufficient data"
@@ -306,39 +431,13 @@ def get_demand_surge(part_number, current_stock):
     return "Yes" if status == "Shortage" else "No", status
 
 def get_part_info(part_number, custom_url=None):
-    # Added caching
     last_entry = PartTrack.query.filter_by(part_num=part_number).order_by(PartTrack.timestamp.desc()).first()
     if last_entry and (datetime.now() - datetime.strptime(last_entry.timestamp, "%Y-%m-%d")).days < 1:
         logging.info(f"Using cached data for {part_number}")
-        result = {
-            "part_number": part_number,
-            "manufacturer": "Cached",  # Simplified - expand as needed
-            "description": "Cached data",
-            "category": "Cached",
-            "suppliers": [{"name": "Cached", "availability": f"{last_entry.stock} In Stock", "lead_time": "Cached", "price_breaks": "Cached", "moq": "Cached", "stock": last_entry.stock, "url": "https://example.com", "score": last_entry.risk_score}],
-            "availability": "Yes" if last_entry.stock > 0 else "No",
-            "single_sourced": "Unknown",
-            "high_risk_suppliers": [],
-            "cost_alternatives": [],
-            "obsolescence_risk": "Unknown",
-            "bottlenecks": "Cached",
-            "disruption_exposure": "Low",
-            "substitution_flexibility": "Unknown",
-            "inventory_alignment": "Unknown",
-            "sustainability_concerns": "Cached",
-            "current_events": "Cached",
-            "risk_score": last_entry.risk_score,
-            "cost_volatility": "Low",
-            "industry_trends": ["Cached"],
-            "tariff_cost": "No",
-            "demand_surge": "Unknown",
-            "demand_status": "Cached",
-            "eol_approaching": "Unknown",
-            "alternatives": []
-        }
-        return result
+        cached_result = json.loads(last_entry.result_json)
+        cached_result["suppliers"] = json.loads(last_entry.suppliers_json)
+        return cached_result
 
-    # [Rest of the function unchanged except for minor logging]
     result = {
         "part_number": part_number,
         "manufacturer": "Unknown",
@@ -352,7 +451,8 @@ def get_part_info(part_number, custom_url=None):
         "obsolescence_risk": "Unknown",
         "bottlenecks": "None identified",
         "disruption_exposure": "Low",
-        "substitution_flexibility": "Unknown",
+        "substitution_flexibility": "No",
+        "parts_you_may_be_interested_in": [],
         "inventory_alignment": "Unknown",
         "sustainability_concerns": "None identified",
         "current_events": "No events found.",
@@ -396,13 +496,15 @@ def get_part_info(part_number, custom_url=None):
                 category = part_data.get("Category", {}).get("Name") or part_data.get("Category", part_data.get("CategoryName"))
                 result["category"] = category if category else "Unknown"
 
-                lifecycle_status = part_data.get("ProductStatus", part_data.get("LifecycleStatus", "Unknown"))
+                lifecycle_status = part_data.get("ProductStatus", {}).get("Status") if isinstance(part_data.get("ProductStatus"), dict) else part_data.get("ProductStatus", "Unknown")
                 result["obsolescence_risk"] = "Yes" if lifecycle_status in ["EndOfLife", "Discontinued"] else "No"
 
                 if dist["name"] == "DigiKey":
                     params = part_data.get("Parameters", [])
-                    logging.debug(f"Raw parameters for {part_number}: {json.dumps(params, indent=2)}")
-                    original_specs = {"category": result["category"]}
+                    original_specs = {
+                        "category": result["category"],
+                        "manufacturer": result["manufacturer"]
+                    }
                     for p in params:
                         param = p.get("Parameter")
                         value = p.get("Value")
@@ -412,6 +514,10 @@ def get_part_info(part_number, custom_url=None):
                             original_specs["Pitch - Mating"] = value
                         elif param == "Mounting Type":
                             original_specs["Mounting Type"] = value
+                        elif param == "Connector Type":
+                            original_specs["Connector Type"] = value
+                        elif param == "Series":
+                            original_specs["Series"] = value
                     logging.debug(f"Original specs for {part_number}: {json.dumps(original_specs, indent=2)}")
 
             if dist["name"] == "DigiKey" or not supplier_data:
@@ -469,11 +575,39 @@ def get_part_info(part_number, custom_url=None):
                     supplier_data_dict["min_price"] = 0
             supplier_data_list.append(supplier_data_dict)
 
+    # Enhanced obsolescence from ProductDetails
+    if "DigiKey" in [d["name"] for d in distributors]:
+        details_data, _, _ = get_digikey_product_details(part_number)
+        if details_data:
+            status = details_data.get("ProductStatus", {}).get("Status", "Unknown")
+            discontinued = details_data.get("Discontinued", False)
+            end_of_life = details_data.get("EndOfLife", False)
+            last_buy = details_data.get("DateLastBuyChance")
+            lead_weeks = details_data.get("ManufacturerLeadWeeks")
+
+            if discontinued or end_of_life or status in ["Obsolete", "Discontinued", "EndOfLife"]:
+                result["obsolescence_risk"] = "Yes"
+            elif status == "Last Time Buy" or (last_buy and datetime.strptime(last_buy, "%Y-%m-%dT%H:%M:%S%z") < datetime.now(timezone.utc)):
+                result["obsolescence_risk"] = "High"
+            else:
+                result["obsolescence_risk"] = "No"
+
+            if status == "Last Time Buy" or end_of_life:
+                result["eol_approaching"] = "Yes"
+            elif lead_weeks and isinstance(lead_weeks, str) and int(''.join(filter(str.isdigit, lead_weeks))) > 26:
+                result["eol_approaching"] = "Possible"
+            else:
+                result["eol_approaching"] = "No"
+
     if original_specs and "category" in original_specs:
-        result["alternatives"] = get_digikey_alternatives(part_number, original_specs)
-    
+        strict_alts = get_digikey_strict_alternatives(part_number, original_specs)
+        related_parts = get_digikey_related_parts(part_number, original_specs)
+        result["substitution_flexibility"] = "Yes" if strict_alts else "No"
+        result["alternatives"] = strict_alts
+        result["parts_you_may_be_interested_in"] = related_parts
+
     supplier_count = len(supplier_data_list)
-    result["availability"] = "Yes" if supplier_count > 0 and all(s["stock"] > 0 for s in supplier_data_list) else "No"
+    result["availability"] = "Yes" if supplier_count > 0 and any(s["stock"] > 0 for s in supplier_data_list) else "No"
     result["single_sourced"] = "Yes" if supplier_count == 1 else "No" if supplier_count > 1 else "Unknown"
     events, risky_regions = get_current_events(result["manufacturer"], result["category"], [s["region"] for s in supplier_data_list])
     result["current_events"] = events
@@ -485,8 +619,7 @@ def get_part_info(part_number, custom_url=None):
     bottleneck_score = sum(1 if s["stock"] < 10 else 0 + 1 if s["lead_time"] > 20 else 0 for s in supplier_data_list) / max(1, supplier_count)
     result["bottlenecks"] = "High" if bottleneck_score > 0.5 else "Low" if bottleneck_score > 0 else "None identified"
     result["disruption_exposure"] = "High" if result["high_risk_suppliers"] else "Low"
-    result["substitution_flexibility"] = "Yes" if result["alternatives"] else "No"
-    
+
     history = PartTrack.query.filter_by(part_num=part_number).order_by(PartTrack.timestamp).all()
     if len(history) >= 2:
         avg_stock = sum(p.stock for p in history) / len(history)
@@ -494,7 +627,8 @@ def get_part_info(part_number, custom_url=None):
         result["inventory_alignment"] = "Low" if latest_stock < avg_stock * 0.5 else "High" if latest_stock > avg_stock * 1.5 else "Aligned"
         stock_trend = [p.stock for p in history]
         decline_rate = (stock_trend[0] - stock_trend[-1]) / len(stock_trend) if stock_trend[0] > stock_trend[-1] else 0
-        result["eol_approaching"] = "Yes" if decline_rate > 10 and result["obsolescence_risk"] == "No" else "No"
+        if result["eol_approaching"] == "Unknown":
+            result["eol_approaching"] = "Yes" if decline_rate > 10 and result["obsolescence_risk"] == "No" else "No"
         total_stock = sum(s["stock"] for s in supplier_data_list)
         prev_stock = history[-2].stock
         status = "Restocking" if total_stock > prev_stock else "Shortage" if total_stock < prev_stock * 0.5 else "Stable"
@@ -502,7 +636,8 @@ def get_part_info(part_number, custom_url=None):
         result["demand_status"] = status
     else:
         result["inventory_alignment"] = "Unknown"
-        result["eol_approaching"] = "Unknown"
+        if result["eol_approaching"] == "Unknown":
+            result["eol_approaching"] = "Unknown"
         result["demand_surge"] = "Unknown"
         result["demand_status"] = "Insufficient data"
 
@@ -527,7 +662,15 @@ def get_part_info(part_number, custom_url=None):
             last = PartTrack.query.filter_by(part_num=part_number).order_by(PartTrack.timestamp.desc()).first()
             if last and s["stock"] > last.stock:
                 db.session.add(SupplierResponse(supplier=s["name"], part_num=part_number, response_time=1.0))
-            db.session.add(PartTrack(part_num=part_number, price=price, stock=s["stock"], timestamp=datetime.now().strftime("%Y-%m-%d"), risk_score=result["risk_score"]))
+            db.session.add(PartTrack(
+                part_num=part_number,
+                price=price,
+                stock=s["stock"],
+                timestamp=datetime.now().strftime("%Y-%m-%d"),
+                risk_score=result["risk_score"],
+                suppliers_json=json.dumps(result["suppliers"]),
+                result_json=json.dumps(result)
+            ))
         db.session.commit()
 
     return result
@@ -547,7 +690,7 @@ def bom_upload():
     form = BOMUploadForm()
     reset_session = request.args.get('reset_session', 'false').lower() == 'true'
     if reset_session:
-        session.pop('bom_parts', None)  # Clear session data
+        session.pop('bom_parts', None)
         return render_template("bom_upload.html", form=form)
 
     if request.method == "POST" and form.validate_on_submit():
@@ -660,67 +803,11 @@ def bom_upload():
             buffer.seek(0)
             logging.info("Generated BOM report")
             return send_file(buffer, as_attachment=True, download_name="bom_report.pdf")
-            return render_template("bom.html", parts=parts, resilience_score=resilience_score, form=form)
-        
-        if "download_report" in request.form:
-            report_data = {}
-            for part in parts:
-                part_num = part["part_number"]
-                if part_num not in report_data:
-                    report_data[part_num] = {
-                        "manufacturer": part["manufacturer"],
-                        "total_stock": 0,
-                        "best_price": 0.0,
-                        "suppliers": [],
-                        "risk_score": part["risk_score"]
-                    }
-                report_part = report_data[part_num]
-                report_part["total_stock"] += sum(s["stock"] for s in part["suppliers"])
-                for supplier in part["suppliers"]:
-                    price = 0.0
-                    if supplier["price_breaks"] != "Not available":
-                        try:
-                            price = float(supplier["price_breaks"].split(",")[0].split("$")[1])
-                        except (IndexError, ValueError):
-                            pass
-                    report_part["best_price"] = min(report_part["best_price"], price) if report_part["best_price"] else price
-                    report_part["suppliers"].append({
-                        "name": supplier["name"],
-                        "stock": supplier["stock"],
-                        "price": price,
-                        "lead_time": supplier["lead_time"]
-                    })
-
-            buffer = BytesIO()
-            c = canvas.Canvas(buffer, pagesize=letter)
-            c.drawString(100, 750, f"BOM Report - {datetime.now().strftime('%Y-%m-%d')}")
-            y = 700
-            for part_num, data in report_data.items():
-                c.drawString(100, y, f"{part_num} ({data['manufacturer']})")
-                y -= 20
-                c.drawString(110, y, f"Total Stock: {data['total_stock']}")
-                y -= 20
-                c.drawString(110, y, f"Best Price: ${data['best_price']:.2f}")
-                y -= 20
-                c.drawString(110, y, f"Risk Score: {data['risk_score']:.1f}/10")
-                y -= 20
-                for supplier in data["suppliers"]:
-                    c.drawString(120, y, f"{supplier['name']}: Stock: {supplier['stock']}, Price: ${supplier['price']:.2f}, Lead: {supplier['lead_time']}")
-                    y -= 20
-                y -= 10
-                if y < 50:
-                    c.showPage()
-                    y = 750
-            c.save()
-            buffer.seek(0)
-            logging.info("Generated BOM report")
-            return send_file(buffer, as_attachment=True, download_name="bom_report.pdf")
 
     return render_template("bom.html", parts=parts, resilience_score=resilience_score, form=form)
 
 @app.route("/bom_template")
 def bom_template():
-    # [Unchanged - same as original]
     csv_data = StringIO()
     writer = csv.writer(csv_data)
     writer.writerow(["PartNumber"])
@@ -744,7 +831,6 @@ def add_comment(part_number):
 
 @app.route("/save_favorite/<part_number>", methods=["POST"])
 def save_favorite(part_number):
-    # [Unchanged - same as original]
     if not FavoritePart.query.filter_by(part_num=part_number).first():
         db.session.add(FavoritePart(part_num=part_number))
     db.session.commit()
@@ -753,7 +839,6 @@ def save_favorite(part_number):
 
 @app.route("/favorites", methods=["GET", "POST"])
 def favorites():
-    # [Unchanged - same as original]
     favorite_parts = FavoritePart.query.all()
     parts_data = [get_part_info(part.part_num) for part in favorite_parts]
     
@@ -775,11 +860,10 @@ def favorites():
 
 @app.route("/bulk", methods=["POST"])
 def bulk_lookup():
-    # [Unchanged - same as original]
     part_numbers = request.form["part_numbers"].split(",")
     parts_data = [get_part_info(p.strip()) for p in part_numbers]
     return render_template("bulk.html", parts=parts_data)
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))  # For Heroku compatibility
+    port = int(os.getenv("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=True)
